@@ -52,13 +52,16 @@ static void show_boot_banner_and_connect() {
   {
     String v = String("Firmware ") + FIRMWARE_VERSION;
     String b = String("Build ") + BUILD_DATE + " " + BUILD_TIME;
-    gfx_draw_centered(v, 0, 0, LOG_W, LOG_H/2, &FreeMonoBold12pt7b, BW_BLACK, BW_WHITE, false);
-    gfx_draw_centered(b, 0, (LOG_H/2)-2, LOG_W, LOG_H, &FreeMonoBold9pt7b, BW_BLACK, BW_WHITE, false);
+    gfx_draw_centered(v, 0, 0, LOG_W, LOG_H/2 - 6,
+                      &FreeSansBold18pt7b, BW_BLACK, BW_WHITE, false);
+    gfx_draw_centered(b, 0, (LOG_H/2) - 4, LOG_W, LOG_H - 8,
+                      &FreeMonoBold9pt7b, BW_BLACK, BW_WHITE, false);
   }
 
-  // 下半：Wi-Fi connecting…
-  gfx_draw_centered("WiFi connecting...", 0, LOG_H/2, LOG_W, LOG_H,
-                    &FreeMonoBold12pt7b, BW_BLACK, BW_WHITE, false);
+  // 下半：Wi-Fi 連線中…
+  gfx_draw_centered("Connecting Wi-Fi...",
+                    0, LOG_H/2, LOG_W, LOG_H,
+                    &FreeSansBold12pt7b, BW_BLACK, BW_WHITE, false);
   display_present();
 
   // 連線
@@ -70,10 +73,11 @@ static void show_boot_banner_and_connect() {
 
   // 顯示結果
   const bool ok = (WiFi.status() == WL_CONNECTED);
-  const char* msg = ok ? "WiFi connected!" : "WiFi failed.";
+  const char* msg = ok ? "Wi-Fi Connected!" : "Wi-Fi Failed!";
   band_to_white(0, LOG_H/2, LOG_W, LOG_H);
-  gfx_draw_centered(msg, 0, LOG_H/2, LOG_W, LOG_H,
-                    &FreeMonoBold12pt7b, BW_BLACK, BW_WHITE, false);
+  gfx_draw_centered(msg,
+                    0, LOG_H/2, LOG_W, LOG_H,
+                    &FreeSansBold12pt7b, BW_BLACK, BW_WHITE, false);
   display_present();
   delay(1200);
 
