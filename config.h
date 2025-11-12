@@ -9,9 +9,9 @@ static const char* WIFI_SSID = "Sputnik";
 static const char* WIFI_PSK  = "qwerasdf";
 
 // 更新節奏
-static const unsigned long POLL_MS         = 60 * 1000UL;      // 每 60 秒抓價
+static const unsigned long POLL_MS         = 600 * 1000UL;      // 每 600 秒抓價
 static const unsigned long FULL_REFRESH_MS = 10 * 60 * 1000UL; // 每 10 分鐘全刷
-static const unsigned long TIME_STRIP_MS   = 60 * 1000UL;      // 每 60 秒更新時間條
+static const unsigned long TIME_STRIP_MS   = 600 * 1000UL;      // 每 600 秒更新時間條
 
 // 版面（橫向）
 static const int MARGIN = 8;   // 上下邊界

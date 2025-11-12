@@ -6,6 +6,7 @@
 #include "wifi_setup.h"
 #include "market_time.h"
 #include "fetch_quote.h"
+#include "version.h"
 
 #include <WiFi.h>
 #include <time.h>
@@ -59,11 +60,47 @@ void setup() {
   if (saved >=0 && saved < N_TICKERS) curIdx = saved;
 
   display_init();
-  wifi_connect(WIFI_SSID, WIFI_PSK);
+  show_boot_banner_and_connect();
+  //wifi_connect(WIFI_SSID, WIFI_PSK);
 
   update_once(true);
   lastFull = lastPoll = millis();
 }
+// ────── Boot 畫面顯示（版本＋Wi-Fi 狀態）──────
+static void show_boot_banner_and_connect() {
+  // 白底
+  band_to_white(0, 0, LOG_W, LOG_H);
+
+  // 上半：版本資訊
+  {
+    String v = String("Firmware ") + FIRMWARE_VERSION;
+    String b = String("Build ") + BUILD_DATE + " " + BUILD_TIME;
+    gfx_draw_centered(v, 0, 0, LOG_W, LOG_H/2, &FreeMonoBold12pt7b, BW_BLACK, BW_WHITE, false);
+    gfx_draw_centered(b, 0, (LOG_H/2)-2, LOG_W, LOG_H, &FreeMonoBold9pt7b, BW_BLACK, BW_WHITE, false);
+  }
+
+  // 下半：Wi-Fi connecting...
+  gfx_draw_centered("WiFi connecting...", 0, LOG_H/2, LOG_W, LOG_H, &FreeMonoBold12pt7b, BW_BLACK, BW_WHITE, false);
+  display_present();
+
+  // 連線
+  wifi_connect(WIFI_SSID, WIFI_PSK);
+
+  // 連上後再做 NTP/時區同步（避免無網時白等）
+  markettime_setup_tz();
+  markettime_wait_synced(15000);
+
+  // 顯示結果
+  const bool ok = (WiFi.status() == WL_CONNECTED);
+  const char* msg = ok ? "WiFi connected!" : "WiFi failed.";
+  band_to_white(0, LOG_H/2, LOG_W, LOG_H);
+  gfx_draw_centered(msg, 0, LOG_H/2, LOG_W, LOG_H, &FreeMonoBold12pt7b, BW_BLACK, BW_WHITE, false);
+  display_present();
+  delay(1200);
+
+  display_present();
+}
+
 
 void loop() {
   unsigned long now = millis();
