@@ -2,7 +2,7 @@
 #include "pins.h"
 #include "stock_list.h"
 #include "display_driver.h"
-#include "display_ui.h"     // 用 draw_time_strip() 來組字串並呼叫 display_draw_time_bar()
+#include "display_ui.h"     // 用 draw_time_strip() 組字串並呼叫 display_draw_time_bar()
 #include "wifi_setup.h"
 #include "market_time.h"
 #include "fetch_quote.h"
@@ -13,30 +13,25 @@
 #include <Preferences.h>
 
 // ---- 狀態 ----
-static int          curIdx        = 0;
-static float        lastPrice     = NAN;
-static float        lastPct       = NAN;
-static unsigned long lastFull     = 0;
-static unsigned long lastPoll     = 0;
+static int           curIdx    = 0;
+static float         lastPrice = NAN;
+static float         lastPct   = NAN;
+static unsigned long lastFull  = 0;
+static unsigned long lastPoll  = 0;
 
 // ---- 偏好（記憶目前股票序號）----
 Preferences prefs;
 
-// ---- 單次更新：畫三行 + 畫時間條 → 送出 ----
+// ────── 單次更新：畫三行 + 時間條 → 送出 ──────
 static void update_once(bool /*full*/) {
   const char* ticker = TICKERS[curIdx];
   float price = NAN, pct = NAN;
 
   { Quote q = fetch_quote(ticker); price = q.price; pct = q.pct; }
 
-  // 畫面（先畫到 buffer）
   display_draw_three_lines(ticker, price, pct, true);
-
-  // 時間條（透過 display_ui.h 內的 draw_time_strip 組字串並呼叫 display_draw_time_bar）
-  draw_time_strip();
-
-  // 一次送出顯示
-  display_present();
+  draw_time_strip();         // 時間條
+  display_present();         // 一次送出
 
   lastPrice = price;
   lastPct   = pct;
@@ -48,24 +43,6 @@ static void next_stock() {
   update_once(true);
 }
 
-void setup() {
-  // Setup NTP and timezone
-  markettime_setup_tz();
-  markettime_wait_synced(15000);
-
-  Serial.begin(115200);
-  prefs.begin("epaper", false);
-
-  int saved = prefs.getInt("curIdx", 0);
-  if (saved >=0 && saved < N_TICKERS) curIdx = saved;
-
-  display_init();
-  show_boot_banner_and_connect();
-  //wifi_connect(WIFI_SSID, WIFI_PSK);
-
-  update_once(true);
-  lastFull = lastPoll = millis();
-}
 // ────── Boot 畫面顯示（版本＋Wi-Fi 狀態）──────
 static void show_boot_banner_and_connect() {
   // 白底
@@ -79,8 +56,9 @@ static void show_boot_banner_and_connect() {
     gfx_draw_centered(b, 0, (LOG_H/2)-2, LOG_W, LOG_H, &FreeMonoBold9pt7b, BW_BLACK, BW_WHITE, false);
   }
 
-  // 下半：Wi-Fi connecting...
-  gfx_draw_centered("WiFi connecting...", 0, LOG_H/2, LOG_W, LOG_H, &FreeMonoBold12pt7b, BW_BLACK, BW_WHITE, false);
+  // 下半：Wi-Fi connecting…
+  gfx_draw_centered("WiFi connecting...", 0, LOG_H/2, LOG_W, LOG_H,
+                    &FreeMonoBold12pt7b, BW_BLACK, BW_WHITE, false);
   display_present();
 
   // 連線
@@ -94,13 +72,32 @@ static void show_boot_banner_and_connect() {
   const bool ok = (WiFi.status() == WL_CONNECTED);
   const char* msg = ok ? "WiFi connected!" : "WiFi failed.";
   band_to_white(0, LOG_H/2, LOG_W, LOG_H);
-  gfx_draw_centered(msg, 0, LOG_H/2, LOG_W, LOG_H, &FreeMonoBold12pt7b, BW_BLACK, BW_WHITE, false);
+  gfx_draw_centered(msg, 0, LOG_H/2, LOG_W, LOG_H,
+                    &FreeMonoBold12pt7b, BW_BLACK, BW_WHITE, false);
   display_present();
   delay(1200);
 
+  // 清白底，交還給主流程
+  band_to_white(0, 0, LOG_W, LOG_H);
   display_present();
 }
 
+void setup() {
+  Serial.begin(115200);
+  prefs.begin("epaper", false);
+
+  // 若 BTN_BOOT 需上拉
+  pinMode(BTN_BOOT, INPUT_PULLUP);
+
+  int saved = prefs.getInt("curIdx", 0);
+  if (saved >= 0 && saved < N_TICKERS) curIdx = saved;
+
+  display_init();
+  show_boot_banner_and_connect();
+
+  update_once(true);
+  lastFull = lastPoll = millis();
+}
 
 void loop() {
   unsigned long now = millis();
@@ -112,8 +109,14 @@ void loop() {
   }
 
   // 定時抓價
-  if (now - lastPoll >= POLL_MS) { lastPoll = now; update_once(false); }
+  if (now - lastPoll >= POLL_MS) {
+    lastPoll = now;
+    update_once(false);
+  }
 
   // 週期全刷（抑制殘影）
-  if (now - lastFull >= FULL_REFRESH_MS) { lastFull = now; update_once(true); }
+  if (now - lastFull >= FULL_REFRESH_MS) {
+    lastFull = now;
+    update_once(true);
+  }
 }
