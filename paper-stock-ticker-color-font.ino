@@ -27,11 +27,24 @@ static float         lastPct   = NAN;
 static unsigned long lastFull  = 0;
 static unsigned long lastPoll  = 0;
 
+// V2.44 的 GPIO0 同時是按鍵 2 與 eink DC：螢幕傳輸時必須是輸出，
+// 傳輸完成後釋放成 INPUT_PULLUP 才能讀到按鍵。
+static void buttons_for_read() {
+  pinMode(BTN_PREV, INPUT_PULLUP);
+  pinMode(BTN_NEXT, INPUT_PULLUP);
+}
+
+static void display_for_write() {
+  pinMode(EPD_DC, OUTPUT);
+}
+
+
 // ---- 偏好（記憶目前股票序號）----
 Preferences prefs;
 
 // ────── 單次更新：畫三行 + 時間條 → 送出 ──────
 static void update_once(bool /*full*/) {
+  display_for_write();
   const char* ticker = TICKERS[curIdx];
   float price = NAN, pct = NAN;
 
@@ -40,6 +53,7 @@ static void update_once(bool /*full*/) {
   display_draw_three_lines(ticker, price, pct, true);
   draw_time_strip();         // 時間條
   display_present();         // 一次送出
+  buttons_for_read();        // GPIO0 與螢幕共用，刷新後釋放給按鍵
 
   lastPrice = price;
   lastPct   = pct;
@@ -47,6 +61,7 @@ static void update_once(bool /*full*/) {
 
 // ────── 診斷畫面：固定內容，確認 eink 渲染是否正確 ──────
 static void show_diagnostic() {
+  display_for_write();
   band_to_white(0, 0, LOG_W, LOG_H);
   gfx_draw_centered(String("DIAG OK"), 0, 8, LOG_W, 48,
                     &FreeSansBold24pt7b, BW_BLACK, BW_WHITE);
@@ -61,11 +76,20 @@ static void show_diagnostic() {
 static void next_stock() {
   curIdx = (curIdx + 1) % N_TICKERS;
   prefs.putInt("curIdx", curIdx);
+  Serial.printf("[BTN] stock button -> %s (index %d)\n", TICKERS[curIdx], curIdx);
+  update_once(true);
+}
+
+static void prev_stock() {
+  curIdx = (curIdx + N_TICKERS - 1) % N_TICKERS;
+  prefs.putInt("curIdx", curIdx);
+  Serial.printf("[BTN] stock button <- %s (index %d)\n", TICKERS[curIdx], curIdx);
   update_once(true);
 }
 
 // ────── Boot 畫面顯示（版本＋Wi-Fi 狀態）──────
 static void show_boot_banner_and_connect() {
+  display_for_write();
   // 白底
   band_to_white(0, 0, LOG_W, LOG_H);
 
@@ -105,6 +129,7 @@ static void show_boot_banner_and_connect() {
   // 清白底，交還給主流程
   band_to_white(0, 0, LOG_W, LOG_H);
   display_present();
+  buttons_for_read();
 }
 
 void setup() {
@@ -115,13 +140,11 @@ void setup() {
   prefs.begin("epaper", false);
 #endif
 
-  // 若 BTN_BOOT 需上拉
-  pinMode(BTN_BOOT, INPUT_PULLUP);
-
   int saved = prefs.getInt("curIdx", 0);
   if (saved >= 0 && saved < N_TICKERS) curIdx = saved;
 
   display_init();
+  buttons_for_read();
   // 可選診斷：原生 API 測試圖形（只限 ESP8266；預設關閉，讓 ticker 繼續執行）
 #if defined(ESP8266) && defined(EPD_NATIVE_DIAGNOSTIC)
   epd_bw_native_test();
@@ -136,10 +159,29 @@ void setup() {
 void loop() {
   unsigned long now = millis();
 
-  // BOOT 按鍵切換股票
-  if (digitalRead(BTN_BOOT) == LOW) {
-    static unsigned long lastBtn = 0;
-    if (now - lastBtn > 250) { next_stock(); lastBtn = now; }
+
+
+  // 兩顆功能鍵：去彈跳後一次按下只換一次，避免按住時連續換股
+  {
+    static bool lastRawPrev = HIGH, stablePrev = HIGH;
+    static bool lastRawNext = HIGH, stableNext = HIGH;
+    static unsigned long changedPrev = 0, changedNext = 0;
+
+    bool rawPrev = digitalRead(BTN_PREV);
+    if (rawPrev != lastRawPrev) { lastRawPrev = rawPrev; changedPrev = now; }
+    if (rawPrev != stablePrev && now - changedPrev >= 40) {
+      stablePrev = rawPrev;
+      Serial.printf("[BTN] GPIO%d -> %s\n", BTN_PREV, stablePrev == LOW ? "PRESSED" : "RELEASED");
+      if (stablePrev == LOW) prev_stock();
+    }
+
+    bool rawNext = digitalRead(BTN_NEXT);
+    if (rawNext != lastRawNext) { lastRawNext = rawNext; changedNext = now; }
+    if (rawNext != stableNext && now - changedNext >= 40) {
+      stableNext = rawNext;
+      Serial.printf("[BTN] GPIO%d -> %s\n", BTN_NEXT, stableNext == LOW ? "PRESSED" : "RELEASED");
+      if (stableNext == LOW) next_stock();
+    }
   }
 
   // 定時抓價

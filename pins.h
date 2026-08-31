@@ -20,5 +20,7 @@
   #define EPD_BUSY     25
 #endif
 
-// BOOT 鍵
-#define BTN_BOOT     0
+// 實板按鍵：左鍵是硬體 RESET；中間黑鍵 GPIO0；右側紅鍵採舊版配置 GPIO3/RX
+// GPIO0 同時是 BOOT/FLASH strap，開機/重置時不要按住。
+#define BTN_PREV     0
+#define BTN_NEXT     3
