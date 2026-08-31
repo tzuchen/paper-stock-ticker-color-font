@@ -166,6 +166,9 @@ void loop() {
     static bool lastRawPrev = HIGH, stablePrev = HIGH;
     static bool lastRawNext = HIGH, stableNext = HIGH;
     static unsigned long changedPrev = 0, changedNext = 0;
+    static unsigned long nextPressedAt = 0;
+    static bool nextLongAction = false;
+    static const unsigned long SETUP_HOLD_MS = 3000;
 
     bool rawPrev = digitalRead(BTN_PREV);
     if (rawPrev != lastRawPrev) { lastRawPrev = rawPrev; changedPrev = now; }
@@ -180,7 +183,25 @@ void loop() {
     if (rawNext != stableNext && now - changedNext >= 40) {
       stableNext = rawNext;
       Serial.printf("[BTN] GPIO%d -> %s\n", BTN_NEXT, stableNext == LOW ? "PRESSED" : "RELEASED");
-      if (stableNext == LOW) next_stock();
+      if (stableNext == LOW) {
+        nextPressedAt = now;
+        nextLongAction = false;
+      } else if (!nextLongAction) {
+        // 短按：下一檔；長按已在按住期間進入設定模式，不再換股。
+        next_stock();
+      }
+    }
+
+    // 紅鍵長按 3 秒進入手機設定 AP。
+    // 左側 RESET 是硬體 reset，無法用韌體計時，因此使用實測 GPIO3 的紅鍵。
+    if (stableNext == LOW && !nextLongAction && now - nextPressedAt >= SETUP_HOLD_MS) {
+      nextLongAction = true;
+#if defined(ESP8266)
+      Serial.println("[BTN] red button held 3s -> starting phone setup portal");
+      wifi_config::portal();
+#else
+      Serial.println("[BTN] red button held 3s -> setup portal unavailable on this build");
+#endif
     }
   }
 
