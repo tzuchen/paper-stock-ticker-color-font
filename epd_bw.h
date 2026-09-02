@@ -40,7 +40,7 @@ static bool s_page_open = false;
 inline void epd_bw_init() {
   Serial.println("[EPD] init start");
   gfx.init(115200, true, 2, false);  // Waveshare 板卡 2ms reset pulse
-  gfx.setRotation(1);                // 旋轉 90° CW → 邏輯尺寸 296×128（面板實際安裝方向）
+  gfx.setRotation(3);                // 旋轉 90° CCW → 邏輯尺寸 296×128（ESP8266 實機方向）
   Serial.printf("[EPD] after init: W=%d H=%d rot=%d\n", gfx.width(), gfx.height(), gfx.getRotation());
   gfx.firstPage();
   gfx.fillScreen(GxEPD_WHITE);
@@ -131,11 +131,11 @@ inline void epd_bw_draw_centered(const String& s, int x0, int y0, int x1, int y1
 inline void epd_bw_draw_three_lines(const char* ticker, float price, float pct, bool /*fullRefresh*/) {
   // init 會重置 GxEPD2 狀態；放在 firstPage 之前（每次都是新 frame 的開頭）
   gfx.init(0, false, 2, false);
-  gfx.setRotation(1);  // 確保 rotation 正確（init 會重置）
+  gfx.setRotation(3);  // 確保 rotation 正確（init 會重置）
 
   Serial.printf("[EPD] draw_three_lines: %s price=%.2f pct=%.2f\n", ticker, price, pct);
 
-  // 版面：296×128（橫向，rotation=1）
+  // 版面：296×128（橫向，rotation=3）
   int margin = 8;
   int gap = 4;
   int l1_h = 24;  // ticker
