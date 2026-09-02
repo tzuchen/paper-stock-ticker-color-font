@@ -1,4 +1,4 @@
-# ESP8266 墨水屏板硬體筆記
+# ESP e-paper ticker hardware notes
 
 ## 實測板子
 
@@ -20,7 +20,7 @@
 按鍵操作：
 
 - 右側紅鍵短按：下一檔股票
-- 右側紅鍵長按約 3 秒：進入手機設定 AP（目前設定頁已有 Wi-Fi 設定；股票清單欄位另行加入）
+- 右側紅鍵長按約 3 秒：進入手機設定 AP，可設定 Wi-Fi 與股票清單
 - 左側黑鍵：僅作硬體 RESET，不由韌體判斷長按時間
 
 注意：雖然部分 V2.41/V2.44 網路資料將按鍵 3 標成 `GPIO5`，這片實板實測是 `GPIO3`；後續韌體以實測結果為準。
@@ -33,12 +33,14 @@
 - 墨水屏刷新完成後：將 `GPIO0` 設為 `INPUT_PULLUP`，才能讀按鍵
 - 上電或 RESET 瞬間不要按住中間黑鍵，否則 ESP8266 可能進入燒錄模式
 
-目前對應程式定義在 `pins.h`：
+ESP8266 對應程式定義在 `pins.h`：
 
 ```cpp
 #define BTN_PREV 0
 #define BTN_NEXT 3
 ```
+
+ESP8266 黑白螢幕使用 GxEPD2，實機方向設定為 `rotation=3`，邏輯尺寸維持 `296x128`。
 
 
 ## 股票清單設定
@@ -60,3 +62,29 @@ Waveshare ESP32 e-Paper Driver Board 的 A/B 鍵是面板相容性切換，不�
 - 長按約 3 秒：進入 Wi-Fi configuration mode
 
 GPIO0 是下載/BOOT strap 腳，上電或重置瞬間不要按住。
+
+
+## ESP32 顯示腳位
+
+ESP32 三色 V4 面板使用 Waveshare driver，顯示腳位定義在 `DEV_Config.h`：
+
+```cpp
+#define EPD_SCK_PIN     13
+#define EPD_MOSI_PIN    14
+#define EPD_CS_PIN      15
+#define EPD_DC_PIN      27
+#define EPD_RST_PIN     26
+#define EPD_BUSY_PIN    25
+```
+
+ESP32 必須用明確 SPI 腳位初始化：`SPI.begin(EPD_SCK_PIN, -1, EPD_MOSI_PIN, EPD_CS_PIN)`。只呼叫 `SPI.begin()` 會使用 ESP32 預設 SPI 腳，app 會正常執行但 e-paper 不刷新。
+
+## Boot 畫面
+
+ESP8266 與 ESP32 使用相同 boot status layout：
+
+- `Firmware vX.Y.Z`
+- `Build <date> <time>`
+- 狀態文字，例如 `Connecting Wi-Fi...`、`Checking update...`、`Wi-Fi Connected!`
+
+三段文字一次畫在同一張 frame，避免 firmware version 與 build date/time 重疊。
