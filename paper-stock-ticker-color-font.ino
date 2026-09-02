@@ -29,15 +29,21 @@ static unsigned long lastFull  = 0;
 static unsigned long lastPoll  = 0;
 static unsigned long lastOta   = 0;
 
-// V2.44 的 GPIO0 同時是按鍵 2 與 eink DC：螢幕傳輸時必須是輸出，
-// 傳輸完成後釋放成 INPUT_PULLUP 才能讀到按鍵。
+// ESP8266 V2.44 的 GPIO0 同時是按鍵 2 與 eink DC：螢幕傳輸時必須是輸出，
+// 傳輸完成後釋放成 INPUT_PULLUP 才能讀到按鍵。ESP32 的 GPIO0 是 BOOT 單鍵。
 static void buttons_for_read() {
-  pinMode(BTN_PREV, INPUT_PULLUP);
-  pinMode(BTN_NEXT, INPUT_PULLUP);
+  if (BTN_PREV >= 0) pinMode(BTN_PREV, INPUT_PULLUP);
+  if (BTN_NEXT >= 0) pinMode(BTN_NEXT, INPUT_PULLUP);
 }
 
 static void display_for_write() {
+#if defined(ESP8266)
   pinMode(EPD_DC, OUTPUT);
+#endif
+}
+
+static bool button_is_pressed(int pin) {
+  return pin >= 0 && digitalRead(pin) == LOW;
 }
 
 
@@ -225,11 +231,11 @@ void loop() {
       }
     }
 
-    // 紅鍵長按 3 秒進入手機設定 AP。
-    // 左側 RESET 是硬體 reset，無法用韌體計時，因此使用實測 GPIO3 的紅鍵。
+    // 切換鍵長按 3 秒進入手機設定 AP。
+    // ESP8266 使用右側紅鍵 GPIO3；ESP32 使用 BOOT/GPIO0 單鍵操作。
     if (stableNext == LOW && !nextLongAction && now - nextPressedAt >= SETUP_HOLD_MS) {
       nextLongAction = true;
-      Serial.println("[BTN] red button held 3s -> starting phone setup portal");
+      Serial.println("[BTN] setup button held 3s -> starting phone setup portal");
       enter_wifi_configuration_mode();
     }
   }

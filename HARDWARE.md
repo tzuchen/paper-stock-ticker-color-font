@@ -50,3 +50,13 @@
 - 設定頁可同時儲存 Wi-Fi 與股票清單
 - 股票代號用逗號分隔，最多 10 個，例如 `SPY,AAPL,TSLA,AMD`
 - 儲存後裝置會自動重啟並使用新的清單
+
+
+## ESP32 按鍵配置
+
+Waveshare ESP32 e-Paper Driver Board 的 A/B 鍵是面板相容性切換，不是韌體使用者按鍵。ESP32 韌體使用 BOOT/GPIO0 作為單鍵操作：
+
+- 短按：下一檔股票
+- 長按約 3 秒：進入 Wi-Fi configuration mode
+
+GPIO0 是下載/BOOT strap 腳，上電或重置瞬間不要按住。

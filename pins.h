@@ -20,7 +20,15 @@
   #define EPD_BUSY     25
 #endif
 
-// 實板按鍵：左鍵是硬體 RESET；中間黑鍵 GPIO0；右側紅鍵採舊版配置 GPIO3/RX
-// GPIO0 同時是 BOOT/FLASH strap，開機/重置時不要按住。
-#define BTN_PREV     0
-#define BTN_NEXT     3
+// 實板按鍵。
+#if defined(ESP8266)
+  // ESP8266 V2.44：中間黑鍵 GPIO0；右側紅鍵 GPIO3/RX。
+  // GPIO0 同時是 BOOT/FLASH strap，開機/重置時不要按住。
+  #define BTN_PREV     0
+  #define BTN_NEXT     3
+#else
+  // Waveshare ESP32 e-Paper Driver Board：A/B 是面板相容性切換，
+  // 可由韌體讀取的板載按鍵是 BOOT/GPIO0。ESP32 以單鍵操作：短按下一檔，長按配網。
+  #define BTN_PREV     -1
+  #define BTN_NEXT     0
+#endif
