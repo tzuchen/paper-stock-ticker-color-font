@@ -8,7 +8,10 @@
 
 class Preferences {
 public:
-  bool begin(const char* /*namespace*/, bool /*readWrite*/ = true) { return true; }
+  bool begin(const char* /*namespace*/, bool /*readWrite*/ = true) {
+    EEPROM.begin(16);
+    return true;
+  }
   void end() {}
   void clear() {}
   void putInt(const char* key, int value) {

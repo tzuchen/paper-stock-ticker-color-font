@@ -6,6 +6,7 @@
 #include "wifi_setup.h"
 #include "market_time.h"
 #include "fetch_quote.h"
+#include "ota_update.h"
 #include "version.h"
 
 #include <time.h>
@@ -26,6 +27,7 @@ static float         lastPrice = NAN;
 static float         lastPct   = NAN;
 static unsigned long lastFull  = 0;
 static unsigned long lastPoll  = 0;
+static unsigned long lastOta   = 0;
 
 // V2.44 的 GPIO0 同時是按鍵 2 與 eink DC：螢幕傳輸時必須是輸出，
 // 傳輸完成後釋放成 INPUT_PULLUP 才能讀到按鍵。
@@ -112,6 +114,15 @@ static void show_boot_banner_and_connect() {
   // 連線
   wifi_connect(WIFI_SSID, WIFI_PSK);
 
+  if (WiFi.status() == WL_CONNECTED) {
+    band_to_white(0, LOG_H/2, LOG_W, LOG_H);
+    gfx_draw_centered("Checking update...",
+                      0, LOG_H/2, LOG_W, LOG_H,
+                      &FreeSansBold12pt7b, BW_BLACK, BW_WHITE);
+    display_present();
+    ota_update::checkAndUpdate();
+  }
+
   // 連上後再做 NTP/時區同步（避免無網時白等）
   markettime_setup_tz();
   markettime_wait_synced(15000);
@@ -153,7 +164,7 @@ void setup() {
   show_boot_banner_and_connect();
 
   update_once(true);
-  lastFull = lastPoll = millis();
+  lastFull = lastPoll = lastOta = millis();
 }
 
 void loop() {
@@ -209,6 +220,12 @@ void loop() {
   if (now - lastPoll >= POLL_MS) {
     lastPoll = now;
     update_once(false);
+  }
+
+  // 長時間運行時也定期檢查 GitHub Releases。
+  if (now - lastOta >= OTA_CHECK_MS) {
+    lastOta = now;
+    ota_update::checkAndUpdate();
   }
 
   // 週期全刷（抑制殘影）

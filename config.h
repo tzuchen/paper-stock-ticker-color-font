@@ -12,6 +12,11 @@ static const char* WIFI_PSK  = "qwerasdf";
 static const unsigned long POLL_MS         = 600 * 1000UL;      // 每 600 秒抓價
 static const unsigned long FULL_REFRESH_MS = 10 * 60 * 1000UL; // 每 10 分鐘全刷
 static const unsigned long TIME_STRIP_MS   = 600 * 1000UL;      // 每 600 秒更新時間條
+static const unsigned long OTA_CHECK_MS    = 6UL * 60UL * 60UL * 1000UL; // 每 6 小時檢查 OTA
+
+// OTA：GitHub Releases latest tag 必須和 FIRMWARE_VERSION 相同，例如 v1.0.1。
+#define OTA_ENABLED 1
+#define OTA_VERSION_URL "https://api.github.com/repos/tzuchen/paper-stock-ticker-color-font/releases/latest"
 
 // 版面（橫向）
 static const int MARGIN = 8;   // 上下邊界

@@ -1,0 +1,72 @@
+name: Release firmware
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: esp8266
+            fqbn: esp8266:esp8266:nodemcuv2
+            core: esp8266:esp8266
+            package_url: https://arduino.esp8266.com/stable/package_esp8266com_index.json
+            artifact: paper-stock-ticker-color-font-esp8266.bin
+          - board: esp32
+            fqbn: esp32:esp32:esp32
+            core: esp32:esp32
+            package_url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+            artifact: paper-stock-ticker-color-font-esp32.bin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: Install core
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls "${{ matrix.package_url }}"
+          arduino-cli core update-index
+          arduino-cli core install "${{ matrix.core }}"
+
+      - name: Install libraries
+        run: |
+          arduino-cli lib install "ArduinoJson"
+          arduino-cli lib install "Adafruit GFX Library"
+          arduino-cli lib install "GxEPD2"
+
+      - name: Prepare legacy include path
+        run: |
+          sudo mkdir -p /home/orin/Arduino
+          sudo ln -sfn "$HOME/Arduino/libraries" /home/orin/Arduino/libraries
+
+      - name: Compile
+        run: |
+          arduino-cli compile \
+            --fqbn "${{ matrix.fqbn }}" \
+            --build-path "build-${{ matrix.board }}" \
+            --warnings default \
+            .
+          cp "build-${{ matrix.board }}/paper-stock-ticker-color-font.ino.bin" "${{ matrix.artifact }}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+      - name: Attach firmware to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.artifact }}
