@@ -116,37 +116,31 @@ static void prev_stock() {
   update_once(true);
 }
 
-// ────── Boot 畫面顯示（版本＋Wi-Fi 狀態）──────
-static void show_boot_banner_and_connect() {
+static void show_boot_status(const String& status) {
   display_for_write();
-  // 白底
   band_to_white(0, 0, LOG_W, LOG_H);
 
-  // 上半：版本資訊
-  {
-    String v = String("Firmware ") + FIRMWARE_VERSION;
-    String b = String("Build ") + BUILD_DATE + " " + BUILD_TIME;
-    gfx_draw_centered(v, 0, 0, LOG_W, LOG_H/2 - 6,
-                      &FreeSansBold18pt7b, BW_BLACK, BW_WHITE);
-    gfx_draw_centered(b, 0, (LOG_H/2) - 4, LOG_W, LOG_H - 8,
-                      &FreeMonoBold9pt7b, BW_BLACK, BW_WHITE);
-  }
-
-  // 下半：Wi-Fi 連線中…
-  gfx_draw_centered("Connecting Wi-Fi...",
-                    0, LOG_H/2, LOG_W, LOG_H,
+  String version = String("Firmware ") + FIRMWARE_VERSION;
+  String build = String("Build ") + BUILD_DATE + " " + BUILD_TIME;
+  gfx_draw_centered(version, 0, 0, LOG_W, 42,
+                    &FreeSansBold18pt7b, BW_BLACK, BW_WHITE);
+  gfx_draw_centered(build, 0, 42, LOG_W, 78,
+                    &FreeMonoBold9pt7b, BW_BLACK, BW_WHITE);
+  gfx_draw_centered(status, 0, 82, LOG_W, LOG_H,
                     &FreeSansBold12pt7b, BW_BLACK, BW_WHITE);
   display_present();
+  buttons_for_read();
+}
+
+// ────── Boot 畫面顯示（版本＋Build＋Wi-Fi 狀態）──────
+static void show_boot_banner_and_connect() {
+  show_boot_status("Connecting Wi-Fi...");
 
   // 連線
   wifi_connect(WIFI_SSID, WIFI_PSK);
 
   if (WiFi.status() == WL_CONNECTED) {
-    band_to_white(0, LOG_H/2, LOG_W, LOG_H);
-    gfx_draw_centered("Checking update...",
-                      0, LOG_H/2, LOG_W, LOG_H,
-                      &FreeSansBold12pt7b, BW_BLACK, BW_WHITE);
-    display_present();
+    show_boot_status("Checking update...");
     ota_update::checkAndUpdate();
   } else {
     enter_wifi_configuration_mode();
@@ -156,17 +150,11 @@ static void show_boot_banner_and_connect() {
   markettime_setup_tz();
   markettime_wait_synced(15000);
 
-  // 顯示結果
-  const bool ok = (WiFi.status() == WL_CONNECTED);
-  const char* msg = ok ? "Wi-Fi Connected!" : "Wi-Fi Failed!";
-  band_to_white(0, LOG_H/2, LOG_W, LOG_H);
-  gfx_draw_centered(msg,
-                    0, LOG_H/2, LOG_W, LOG_H,
-                    &FreeSansBold12pt7b, BW_BLACK, BW_WHITE);
-  display_present();
+  show_boot_status(WiFi.status() == WL_CONNECTED ? "Wi-Fi Connected!" : "Wi-Fi Failed!");
   delay(1200);
 
   // 清白底，交還給主流程
+  display_for_write();
   band_to_white(0, 0, LOG_W, LOG_H);
   display_present();
   buttons_for_read();
