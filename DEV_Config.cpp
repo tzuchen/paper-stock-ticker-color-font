@@ -14,7 +14,11 @@ UBYTE DEV_Module_Init(void) {
   pinMode(EPD_BUSY_PIN, INPUT);
   digitalWrite(EPD_CS_PIN, HIGH);
   digitalWrite(EPD_RST_PIN, HIGH);
+#if defined(ESP32)
+  SPI.begin(EPD_SCK_PIN, -1, EPD_MOSI_PIN, EPD_CS_PIN);
+#else
   SPI.begin();
+#endif
   SPI.setFrequency(1000000);
   SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
   return 0;
@@ -30,7 +34,11 @@ void DEV_GPIO_Init(void) {
 }
 
 void DEV_SPI_Init(void) {
+#if defined(ESP32)
+  SPI.begin(EPD_SCK_PIN, -1, EPD_MOSI_PIN, EPD_CS_PIN);
+#else
   SPI.begin();
+#endif
   SPI.setFrequency(1000000);
   SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
 }
