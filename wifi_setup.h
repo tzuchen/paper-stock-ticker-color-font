@@ -17,8 +17,6 @@
 
 namespace wifi_config {
 static const char* AP_NAME = "SPY-Ticker-Setup";
-static const char* AP_PASSWORD = "configure";
-
 static const uint32_t MAGIC = 0x53505957UL; // "SPYW"
 static const int EEPROM_SIZE = 512;
 static const int EEPROM_OFFSET = 16; // prefs shim 使用 0..3，stock list 從 160 開始。
@@ -72,7 +70,7 @@ inline void portal() {
   stock_list::load();
 
   WiFi.mode(WIFI_AP);
-  WiFi.softAP(AP_NAME, AP_PASSWORD);
+  WiFi.softAP(AP_NAME);
   dns.start(53, "*", WiFi.softAPIP());
 
   server.onNotFound([&server]() { server.sendHeader("Location", "/", true); server.send(302, "text/plain", ""); });
@@ -123,8 +121,8 @@ inline void portal() {
     ESP.restart();
   });
   server.begin();
-  Serial.printf("[WiFi] setup AP: %s / password: %s / open http://%s\n",
-                AP_NAME, AP_PASSWORD, WiFi.softAPIP().toString().c_str());
+  Serial.printf("[WiFi] setup AP: %s / open http://%s\n",
+                AP_NAME, WiFi.softAPIP().toString().c_str());
 
   while (true) {
     dns.processNextRequest();
@@ -149,8 +147,4 @@ inline void wifi_connect(const char* fallbackSsid, const char* fallbackPassword)
     Serial.print(".");
   }
   Serial.printf("\nWiFi %s\n", (WiFi.status()==WL_CONNECTED)?"connected":"failed");
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("[WiFi] starting phone setup portal");
-    wifi_config::portal();
-  }
 }

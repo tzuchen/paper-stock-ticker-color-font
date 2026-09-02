@@ -75,6 +75,25 @@ static void show_diagnostic() {
   Serial.println("[DIAG] diagnostic frame presented");
 }
 
+static void show_wifi_configuration_mode() {
+  display_for_write();
+  band_to_white(0, 0, LOG_W, LOG_H);
+  gfx_draw_centered(String("WiFi"), 0, 0, LOG_W, LOG_H / 2,
+                    &FreeSansBold24pt7b, BW_BLACK, BW_WHITE);
+  gfx_draw_centered(String("Configuration Mode"), 0, LOG_H / 2 - 6, LOG_W, LOG_H - 18,
+                    &FreeSansBold12pt7b, BW_BLACK, BW_WHITE);
+  gfx_draw_centered(String("AP: SPY-Ticker-Setup"), 0, LOG_H - 22, LOG_W, LOG_H,
+                    &FreeMonoBold9pt7b, BW_BLACK, BW_WHITE);
+  display_present();
+  buttons_for_read();
+}
+
+static void enter_wifi_configuration_mode() {
+  Serial.println("[WiFi] entering configuration mode");
+  show_wifi_configuration_mode();
+  wifi_config::portal();
+}
+
 static void next_stock() {
   curIdx = (curIdx + 1) % stock_list::count();
   prefs.putInt("curIdx", curIdx);
@@ -121,6 +140,8 @@ static void show_boot_banner_and_connect() {
                       &FreeSansBold12pt7b, BW_BLACK, BW_WHITE);
     display_present();
     ota_update::checkAndUpdate();
+  } else {
+    enter_wifi_configuration_mode();
   }
 
   // 連上後再做 NTP/時區同步（避免無網時白等）
@@ -209,7 +230,7 @@ void loop() {
     if (stableNext == LOW && !nextLongAction && now - nextPressedAt >= SETUP_HOLD_MS) {
       nextLongAction = true;
       Serial.println("[BTN] red button held 3s -> starting phone setup portal");
-      wifi_config::portal();
+      enter_wifi_configuration_mode();
     }
   }
 
