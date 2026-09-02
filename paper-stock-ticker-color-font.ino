@@ -60,7 +60,9 @@ static void update_once(bool /*full*/) {
 
   display_draw_three_lines(ticker, price, pct, true);
   draw_time_strip();         // 時間條
+  Serial.printf("[display] present %s\n", ticker);
   display_present();         // 一次送出
+  Serial.println("[display] present done");
   buttons_for_read();        // GPIO0 與螢幕共用，刷新後釋放給按鍵
 
   lastPrice = price;
@@ -182,7 +184,9 @@ void setup() {
   stock_list::load();
   if (saved >= 0 && saved < stock_list::count()) curIdx = saved;
 
+  Serial.println("[boot] display init");
   display_init();
+  Serial.println("[boot] display init done");
   buttons_for_read();
   // 可選診斷：原生 API 測試圖形（只限 ESP8266；預設關閉，讓 ticker 繼續執行）
 #if defined(ESP8266) && defined(EPD_NATIVE_DIAGNOSTIC)
@@ -209,15 +213,17 @@ void loop() {
     static bool nextLongAction = false;
     static const unsigned long SETUP_HOLD_MS = 3000;
 
-    bool rawPrev = digitalRead(BTN_PREV);
-    if (rawPrev != lastRawPrev) { lastRawPrev = rawPrev; changedPrev = now; }
-    if (rawPrev != stablePrev && now - changedPrev >= 40) {
-      stablePrev = rawPrev;
-      Serial.printf("[BTN] GPIO%d -> %s\n", BTN_PREV, stablePrev == LOW ? "PRESSED" : "RELEASED");
-      if (stablePrev == LOW) prev_stock();
+    if (BTN_PREV >= 0) {
+      bool rawPrev = button_is_pressed(BTN_PREV) ? LOW : HIGH;
+      if (rawPrev != lastRawPrev) { lastRawPrev = rawPrev; changedPrev = now; }
+      if (rawPrev != stablePrev && now - changedPrev >= 40) {
+        stablePrev = rawPrev;
+        Serial.printf("[BTN] GPIO%d -> %s\n", BTN_PREV, stablePrev == LOW ? "PRESSED" : "RELEASED");
+        if (stablePrev == LOW) prev_stock();
+      }
     }
 
-    bool rawNext = digitalRead(BTN_NEXT);
+    bool rawNext = button_is_pressed(BTN_NEXT) ? LOW : HIGH;
     if (rawNext != lastRawNext) { lastRawNext = rawNext; changedNext = now; }
     if (rawNext != stableNext && now - changedNext >= 40) {
       stableNext = rawNext;
