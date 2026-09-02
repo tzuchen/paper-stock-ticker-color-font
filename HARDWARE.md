@@ -39,3 +39,14 @@
 #define BTN_PREV 0
 #define BTN_NEXT 3
 ```
+
+
+## 股票清單設定
+
+右側紅鍵長按約 3 秒會進入手機設定 AP：
+
+- AP 名稱：`SPY-Ticker-Setup`
+- AP 密碼：`configure`
+- 設定頁可同時儲存 Wi-Fi 與股票清單
+- 股票代號用逗號分隔，最多 10 個，例如 `SPY,AAPL,TSLA,AMD`
+- 儲存後裝置會自動重啟並使用新的清單

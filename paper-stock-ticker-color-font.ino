@@ -47,7 +47,7 @@ Preferences prefs;
 // ────── 單次更新：畫三行 + 時間條 → 送出 ──────
 static void update_once(bool /*full*/) {
   display_for_write();
-  const char* ticker = TICKERS[curIdx];
+  const char* ticker = stock_list::get(curIdx);
   float price = NAN, pct = NAN;
 
   { Quote q = fetch_quote(ticker); price = q.price; pct = q.pct; }
@@ -76,16 +76,16 @@ static void show_diagnostic() {
 }
 
 static void next_stock() {
-  curIdx = (curIdx + 1) % N_TICKERS;
+  curIdx = (curIdx + 1) % stock_list::count();
   prefs.putInt("curIdx", curIdx);
-  Serial.printf("[BTN] stock button -> %s (index %d)\n", TICKERS[curIdx], curIdx);
+  Serial.printf("[BTN] stock button -> %s (index %d)\n", stock_list::get(curIdx), curIdx);
   update_once(true);
 }
 
 static void prev_stock() {
-  curIdx = (curIdx + N_TICKERS - 1) % N_TICKERS;
+  curIdx = (curIdx + stock_list::count() - 1) % stock_list::count();
   prefs.putInt("curIdx", curIdx);
-  Serial.printf("[BTN] stock button <- %s (index %d)\n", TICKERS[curIdx], curIdx);
+  Serial.printf("[BTN] stock button <- %s (index %d)\n", stock_list::get(curIdx), curIdx);
   update_once(true);
 }
 
@@ -152,7 +152,8 @@ void setup() {
 #endif
 
   int saved = prefs.getInt("curIdx", 0);
-  if (saved >= 0 && saved < N_TICKERS) curIdx = saved;
+  stock_list::load();
+  if (saved >= 0 && saved < stock_list::count()) curIdx = saved;
 
   display_init();
   buttons_for_read();
@@ -207,12 +208,8 @@ void loop() {
     // 左側 RESET 是硬體 reset，無法用韌體計時，因此使用實測 GPIO3 的紅鍵。
     if (stableNext == LOW && !nextLongAction && now - nextPressedAt >= SETUP_HOLD_MS) {
       nextLongAction = true;
-#if defined(ESP8266)
       Serial.println("[BTN] red button held 3s -> starting phone setup portal");
       wifi_config::portal();
-#else
-      Serial.println("[BTN] red button held 3s -> setup portal unavailable on this build");
-#endif
     }
   }
 
